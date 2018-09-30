@@ -21,7 +21,7 @@ LD_FLAGS= -lpthread -L"/usr/local/faac/lib" -lfaac -lpulse
 
 EXE=test
 
-all: $(EXE)
+all:clean $(EXE)
 
 $(EXE):$(OBJS)
 	$(CC)  -o $@ $(OBJS) $(LD_FLAGS) 
@@ -29,7 +29,7 @@ $(EXE):$(OBJS)
 %.o:%.cpp
 	@echo \# $(FILES) : files list....
 	@echo \# $(OBJS) : files list....
-	$(CC) 	$(CC_OPTS) $(INCLUDE) $(LD_FLAGS) $< -o $@	
+	$(CC) 	$(CC_OPTS)  $< -o $@	
 
 
 
