@@ -72,7 +72,7 @@ static void stream_read_callback(pa_stream *s, size_t length, void *userdata)
         }
 
         lout =  pa_stream_writable_size(ostream);
-        fprintf(stderr, "Writable: %lu\n", lout);
+        //fprintf(stderr, "Writable: %lu\n", lout);
         if (lout == 0) {
             fprintf(stderr, "can't write, zero writable\n");
             return;
@@ -228,9 +228,10 @@ void state_cb(pa_context *c, void *userdata)
 
             printf("buffer fragsize:%d\n", buffer_attr.fragsize);
             printf("buffer minreq:%d\n", buffer_attr.minreq);
-            buffer_attr.fragsize  = 512;
+            buffer_attr.minreq = 1024;
+            buffer_attr.fragsize  = 2048;
 
-            sleep(10);
+            sleep(3);
             // and start recording
             if (pa_stream_connect_record(stream, NULL, &buffer_attr, flags) < 0)
             {
