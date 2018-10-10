@@ -75,11 +75,11 @@ struct MemPacket
 {
     struct list_head    list;
     int                 magic_head;
-    int                 total_size;
-    int                 blk_num;
+    int                 total_size;     //total size of data , not total block size.
+    int                 blk_num;        //blocks number, blk_num * block_size >= total_size.
     int                 mem_refs;       //refernce  numbers . 引用计数.
-    struct list_head    blks_list;
-    char                pkt_name[8];    //
+    struct list_head    blks_list;      //All realloc's blocks need to add to this list head.
+    char                pkt_name[8];    //Just used to record the user of this packet.
     struct MemKitHandle *handle;        //pointer to owner handle.
 };
 

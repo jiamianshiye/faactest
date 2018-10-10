@@ -40,9 +40,9 @@ int aac_init(int rate, int channels)
     return 0;
 }
 
-int aac_enc_pcm(unsigned char *buff, unsigned int buflen, unsigned char *out)
+int aac_enc_pcm(unsigned char *pcmbuffer, unsigned int buflen, unsigned char *out)
 {
-    int ret = faacEncEncode(g_aacEncHdl, (int *)buff, g_inputsamples, out, g_maxoutbyts);
+    int ret = faacEncEncode(g_aacEncHdl, (int *)pcmbuffer, g_inputsamples, out, g_maxoutbyts);
     if(ret < 1)
     {
         INFO("Cannot encoder this frame of pcm data!\n");
