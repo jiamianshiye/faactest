@@ -1,5 +1,6 @@
 INCLUDE=
-INCLUDE+=./
+INCLUDE+=-I"./"\
+		-I"/usr/local/faac/include"
 
 CC=g++
 
@@ -16,21 +17,24 @@ OBJS+=$(subst .c,.o, $(FILES_C))
 OBJS+=$(subst .cpp,.o, $(FILES_CPP))
 
 
-CC_OPTS=-g -c -Wall
-LD_FLAGS= -lpthread -L"/usr/local/faac/lib" -lfaac -lpulse
+CC_OPTS=-g -Wall -c
+LD_FLAGS=-std=c++11 -lpthread -lpulse -L"/usr/local/faac/lib" -lfaac 
 
 EXE=test
 
 all:clean $(EXE)
 
 $(EXE):$(OBJS)
-	$(CC)  -o $@ $(OBJS) $(LD_FLAGS) 
+	$(CC)  -o $@ $(OBJS)  $(INCLUDE) $(LD_FLAGS) 
 
-%.o:%.cpp
-	@echo \# $(FILES) : files list....
-	@echo \# $(OBJS) : files list....
-	$(CC) 	$(CC_OPTS)  $< -o $@	
-
+.c.o:
+	@echo \#files list $(FILES) : ....
+	@echo \#files list $(INCLUDE) :....
+	@echo \#files list $(OBJS) : ....
+	$(CC) 	$(CC_OPTS) $< -o $@	$(LD_FLAGS) 
+.cpp.o:
+	@echo \#cpp files list $(OBJS) : ....
+	$(CC) 	$(CC_OPTS) $< -o $@	$(LD_FLAGS)  $(INCLUDE)
 
 
 .PHONY: clean

@@ -7,6 +7,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "pulse.h"
+#include "memkit.h"
 
 #define CLEAR_LINE "\n"
 #define BUFF_LEN 4096
@@ -17,6 +19,7 @@ pa_mainloop_api *pa_mlapi = NULL;
 static int retval;
 int verbose = 1;
 static pa_stream_flags_t flags;
+static int pcm_fd;
 
 #define pa_memzero(x,l) (memset((x), 0, (l)))
 #define pa_zero(x) (pa_memzero(&(x), sizeof(x)))
@@ -31,7 +34,8 @@ static pa_sample_spec sample_spec = {
   .channels = 2
 };
 
-
+struct pulseUnit g_pulseunit;
+callback_get_pcm cb_get_pcm = NULL;
 
 //int fdout;
 //char *fname = "tmp.s16";
@@ -57,6 +61,7 @@ static void stream_read_callback(pa_stream *s, size_t length, void *userdata)
     int i = 0;
     char *ptr = NULL;
     int lout;
+    int ret = 0;
        
     while (pa_stream_readable_size(s) > 0)
     {
@@ -82,6 +87,13 @@ static void stream_read_callback(pa_stream *s, size_t length, void *userdata)
             fprintf(stderr, "Truncating read length:%d,lout:%d\n", length, lout);
             length = lout;
         }
+
+        if(g_pulseunit.writefile && pcm_fd > 0)
+        {
+            write(pcm_fd, data, length);
+        }
+
+        ret = cb_get_pcm((unsigned char *)data, (unsigned int)length);
 
         if (pa_stream_write(ostream, (uint8_t*) data, length, NULL, 0, PA_SEEK_RELATIVE) < 0) {
             fprintf(stderr, "pa_stream_write() failed\n");
@@ -247,13 +259,38 @@ void state_cb(pa_context *c, void *userdata)
         }
     }
 }
-int pulse_init()
+int pulse_init(struct pulseUnit *pObj)
 {
     pa_context *pa_ctx = NULL;
 // Create a mainloop API and connection to the default server
     pa_ml = pa_mainloop_new();
     pa_mlapi = pa_mainloop_get_api(pa_ml);
     pa_ctx = pa_context_new(pa_mlapi, "test");
+
+    if(NULL == pObj)
+    {
+        ERROR("Wrong params pObj:%p!\n", pObj);
+        return -1;
+    }
+
+    memset(&g_pulseunit, 0, sizeof(struct pulseUnit));
+
+    sample_spec.channels = pObj->channels;
+    sample_spec.rate = pObj->rate;
+    sample_spec.format = (pa_sample_format_t)pObj->format;
+    cb_get_pcm = pObj->cb_pcm_data;
+
+    if(pObj->writefile == 1)
+    {
+        pcm_fd = open(pObj->filename, O_RDWR | O_CREAT | O_TRUNC);
+        if(pcm_fd < 0)
+        {
+            ERROR("Cannot open file : %s\n", pObj->filename);
+            pcm_fd = -1;
+        }
+    }
+
+    memcpy(&g_pulseunit, pObj, sizeof(struct pulseUnit));
 
   // This function connects to the pulse server
     pa_context_connect(pa_ctx, NULL, (pa_context_flags_t)0, NULL);
