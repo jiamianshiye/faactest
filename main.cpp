@@ -5,7 +5,9 @@
 #include <stdlib.h>
 #include <pulse/pulseaudio.h>
 #include <pthread.h>
-
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <errno.h>
 
 #include "pulse.h"
@@ -25,29 +27,51 @@ struct list_head        g_pcm_list;
 pthread_mutex_t         g_pcm_mtx;
 pthread_cond_t          g_pcm_cond;
 
+#define     DEBUG       (1)
 
+unsigned char    g_pcm_buf[100*1000];
+int     g_pcm_off = 0;
 
 int cb_get_pcm(unsigned char *buf, unsigned int len)
 {
     struct MemItorVec itor;
     struct MemPacket *pkt = NULL;
     unsigned int allsize = 0;
-    int blk_len = 0;
-    int thislen = 0;
+    unsigned int blk_len = 0;
+    unsigned int thislen = 0;
     unsigned char *ptr = NULL;
+    char name[] = "pcm";
+    int pcm_blk = 4096;
+    unsigned char aacbuf[10*1024];
+    int ret = 0;
 
     if(NULL != buf && len > 0)
     {
         INFO("Doing get pcm data buf:%p, len:%d!\n", buf, len);
     }
-    allsize = len;
 
-    pkt = mk_malloc(&g_pcmhandle, len, "pcm");
+
+    ptr = &g_pcm_buf[g_pcm_off];
+    memcpy(ptr, buf, len);
+    g_pcm_off += len;
+    if(g_pcm_off < pcm_blk)
+    {
+        return 0;
+    }
+
+    pkt = mk_malloc(&g_pcmhandle, pcm_blk, name);
+    if(pkt == NULL)
+    {
+        usleep(10*1000);
+        return -1;
+    }
 
     mk_set_itor(pkt, &itor);
-    ptr = buf;
+    ptr = g_pcm_buf;
+    allsize = pcm_blk;
 
-    while(allsize > 0 && mk_next_entry(&itor, &blk_len))
+    //while(allsize > 0 && mk_next_entry(&itor, &blk_len))
+    if(mk_next_entry(&itor, &blk_len) == 0)
     {
         thislen = blk_len > allsize ? allsize : blk_len;
         memcpy(itor.entry, ptr, thislen);
@@ -55,11 +79,22 @@ int cb_get_pcm(unsigned char *buf, unsigned int len)
         allsize -= thislen;
         //itor.poffset
     }
+    
+    //int aaclen = aac_enc_pcm((unsigned char *)buf, (unsigned int)len, aacbuf);
+    //INFO("aaclen : %d, pcm:%p, pcmlen:%d\n", aaclen,buf, len);
 
     pthread_mutex_lock(&g_pcm_mtx);
     list_add_tail(&pkt->list, &g_pcm_list);
     pthread_mutex_unlock(&g_pcm_mtx);
     pthread_cond_signal(&g_pcm_cond);
+
+    //g_pcm_off -= pcm_blk;
+    g_pcm_off = 0;
+    if(g_pcm_off != 0)
+    {
+        memmove(g_pcm_buf, &g_pcm_buf[pcm_blk], g_pcm_off);
+    }
+    return 0;
 }
 
 
@@ -67,8 +102,36 @@ void *enc_pcm_func(void *arg)
 {
     struct MemPacket *pkt = NULL;
     struct list_head *pos, *n;
-    while(1)
+    struct MemItorVec itor;
+    unsigned char aacbuf[100*2048];
+    int aaclen = 0;
+    unsigned int blocklen = 0;
+
+#if DEBUG
+    int times = 1000;
+    int aac_fd;
+    int pcm_fd;
+
+    aac_fd = open("audio.aac", O_RDWR | O_CREAT);
+    if(aac_fd < 0)
     {
+        ERROR("Cannot open audio.aac : %s!\n", strerror(errno));
+        exit(1);
+    }
+    pcm_fd = open("audio.pcm", O_RDWR | O_CREAT);
+    if(aac_fd < 0)
+    {
+        ERROR("Cannot open audio.aac : %s!\n", strerror(errno));
+        exit(1);
+    }
+    while(times-- > 0)
+#else
+    while(1)
+#endif    
+    {
+        memset(&itor, 0, sizeof(itor));
+        memset(aacbuf, 0, 100*1024);
+
         pthread_mutex_lock(&g_pcm_mtx);
         while(list_empty(&g_pcm_list))
         {
@@ -84,13 +147,35 @@ void *enc_pcm_func(void *arg)
             list_del(&pkt->list);
         }
         pthread_mutex_unlock(&g_pcm_mtx);
-        
 
+        INFO("Get a packet for faac:pkt size:%d!\n", pkt->total_size);
 
-        INFO("Get a packet for faac!\n");
+        mk_set_itor(pkt, &itor);
+        mk_next_entry(&itor, &blocklen);
+        write(pcm_fd, itor.entry, pkt->total_size);
+        aaclen = aac_enc_pcm(itor.entry, pkt->total_size, aacbuf);
+        if(aaclen <= 0)
+        {
+            ERROR("Cannot enc this pcm data!\n");
+        }
+        else
+        {
+#if DEBUG
+            INFO("Enc %d lenth aac data!\n", aaclen);
+            write(aac_fd, aacbuf, aaclen);
+#endif            
+        }
 
+        aaclen = 0;
         mk_free(pkt);
     }
+
+    aac_enc_close();
+#if DEBUG
+    close(aac_fd);
+    close(pcm_fd);
+    exit(1);
+#endif    
 
 }
 
@@ -126,7 +211,12 @@ int main(int argc, char *argv[])
         INFO("Cannot do mem kit handle init !\n");
         exit(1);
     }
-    aac_init(PA_RATE, PA_CHANNELS);
+    if(aac_init(PA_RATE, PA_CHANNELS) < 0)
+    {
+        sleep(10);
+        ERROR("Cannot init aac encoder!\n");
+    }
+    sleep(3);
     pulse_init(&pu);
 
     

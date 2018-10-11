@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include "pulse.h"
 #include "memkit.h"
+#include "aac_kit.h"
 
 #define CLEAR_LINE "\n"
 #define BUFF_LEN 4096
@@ -27,7 +28,7 @@ static int pcm_fd;
 static pa_stream *stream = NULL;
 static pa_stream *ostream = NULL;
 
-static pa_context *context;
+//static pa_context *context;
 static pa_sample_spec sample_spec = {
   .format = PA_SAMPLE_S16LE,
   .rate = 44100,
@@ -58,10 +59,9 @@ static void stream_read_callback(pa_stream *s, size_t length, void *userdata)
 
     gettimeofday(&tv2, NULL);
     tv1 = tv2;
-    int i = 0;
-    char *ptr = NULL;
-    int lout;
-    int ret = 0;
+    unsigned int lout;
+    unsigned char aacbuf[10*1024];
+    int aaclen;
        
     while (pa_stream_readable_size(s) > 0)
     {
@@ -77,7 +77,6 @@ static void stream_read_callback(pa_stream *s, size_t length, void *userdata)
         }
 
         lout =  pa_stream_writable_size(ostream);
-        //fprintf(stderr, "Writable: %lu\n", lout);
         if (lout == 0) {
             fprintf(stderr, "can't write, zero writable\n");
             return;
@@ -90,16 +89,19 @@ static void stream_read_callback(pa_stream *s, size_t length, void *userdata)
 
         if(g_pulseunit.writefile && pcm_fd > 0)
         {
-            write(pcm_fd, data, length);
+            //write(pcm_fd, data, length);
         }
+        //aaclen = aac_enc_pcm((unsigned char *)data, (unsigned int)length, aacbuf);
+        //INFO("aaclen : %d, pcm:%p, pcmlen:%d\n", aaclen,data, length);
 
-        ret = cb_get_pcm((unsigned char *)data, (unsigned int)length);
-
+        cb_get_pcm((unsigned char *)data, (unsigned int)length);
+#if 0
         if (pa_stream_write(ostream, (uint8_t*) data, length, NULL, 0, PA_SEEK_RELATIVE) < 0) {
             fprintf(stderr, "pa_stream_write() failed\n");
             exit(1);
             return;
         }
+#endif       
         // swallow the data peeked at before
         pa_stream_drop(s);
     }
@@ -110,7 +112,7 @@ static void stream_write_callback(pa_stream *s, size_t length, void *userdata) {
   //assert(s);
   //assert(length > 0);
 
-  printf("Stream write callback: Ready to write %lu bytes\n", length);
+  //printf("Stream write callback: Ready to write %lu bytes\n", length);
  }
 
 void stream_state_callback(pa_stream *s, void *userdata)

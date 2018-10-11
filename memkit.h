@@ -42,7 +42,7 @@ enum E_MEM_RET_TYPE
 struct MemKitBlock
 {
     struct list_head    list;
-    int                 magic_head; //block status. Default is MEM_BLOCK_MAGIC_HEAD
+    unsigned int        magic_head; //block status. Default is MEM_BLOCK_MAGIC_HEAD
     unsigned int        blk_length; //total useful memory lenth of this block
     unsigned int        blk_offset; //used lenth of this block
     unsigned int        blk_idx;    //Used for packet list index.
@@ -50,7 +50,7 @@ struct MemKitBlock
 };
 struct MemKitTail
 {
-    int                 magic_tail; //must always be MEM_BLOCK_MAGIC. 
+    unsigned int        magic_tail; //must always be MEM_BLOCK_MAGIC. 
 };
 
 /**
@@ -74,7 +74,7 @@ struct MemKitHandle
 struct MemPacket
 {
     struct list_head    list;
-    int                 magic_head;
+    unsigned int        magic_head;
     int                 total_size;     //total size of data , not total block size.
     int                 blk_num;        //blocks number, blk_num * block_size >= total_size.
     int                 mem_refs;       //refernce  numbers . 引用计数.
@@ -147,7 +147,7 @@ void mk_set_itor(struct MemPacket *pkt, struct MemItorVec *pItor);
  *  blk_len :   [OUT] put out this block lenth(memory length)
  *  return val:  -1 for failed. 0 for ok.
 */
-int mk_next_entry(struct MemItorVec *pItor, int *blk_len);
+int mk_next_entry(struct MemItorVec *pItor, unsigned int *blk_len);
 
 
 

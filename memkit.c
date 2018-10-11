@@ -113,7 +113,7 @@ int mk_handle_init(struct MemKitHandle *handle, unsigned int mm_blocks, unsigned
 {
     char *p = NULL;
     int ret = E_MEM_INIT_FAIL;
-    int i = 0;
+    unsigned int i = 0;
     char *ptr = NULL;
     struct MemKitBlock *pBlk = NULL;
     struct MemKitTail *pBlkTail = NULL;
@@ -469,7 +469,7 @@ void mk_set_itor(struct MemPacket *pkt, struct MemItorVec *pItor)
  *  blk_len :   [OUT] put out this block lenth(memory length)
  *  return val:  -1 for failed. 0 for ok.
 */
-int mk_next_entry(struct MemItorVec *pItor, int *blk_len)
+int mk_next_entry(struct MemItorVec *pItor, unsigned int *blk_len)
 {
     //unsigned char *ptr = NULL;
     struct list_head *plist = NULL;
@@ -520,8 +520,8 @@ EXIT:
 int mk_copy_in(struct MemPacket *pkt, void *in, int in_size)
 {
     int ret = -1;
-    int allsize = in_size;
-    int blocklen = 0;
+    unsigned int allsize = (unsigned int)in_size;
+    unsigned int blocklen = 0;
     int thislen = 0;
     char *pin = (char *)in;
 

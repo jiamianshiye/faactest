@@ -7,6 +7,7 @@
 
 static int g_inputsamples = 0;
 static int g_maxoutbyts = 0; 
+unsigned int pcm_frame_bit = 16;
 static faacEncHandle g_aacEncHdl;
 static faacEncConfigurationPtr pConfiguration;
 
@@ -19,17 +20,17 @@ int aac_init(int rate, int channels)
         ERROR("Wrong to open faac enc!\n");
         return -1;
     }
+    INFO("input samples:%d , maxout :%d\n", g_inputsamples, g_maxoutbyts);
     pConfiguration = faacEncGetCurrentConfiguration(g_aacEncHdl); 
     pConfiguration->inputFormat = FAAC_INPUT_16BIT;
     pConfiguration->outputFormat = 1;
-    pConfiguration->useTns = true;
-    pConfiguration->useLfe = false;
+    //pConfiguration->useTns = 1;
+    pConfiguration->useLfe = 0;
     pConfiguration->aacObjectType = LOW;
-    pConfiguration->mpegVersion = MPEG4;
+    pConfiguration->allowMidside = 0;
     //pConfiguration->shortctl=SHORTCTL_NORMAL;
-    pConfiguration->quantqual = 50;
-    pConfiguration->bandWidth = 0;
-    pConfiguration->bitRate = 0;
+    pConfiguration->bandWidth = 32000;
+    pConfiguration->bitRate = 48000;
 
     if(faacEncSetConfiguration(g_aacEncHdl, pConfiguration) < 0)
     {
@@ -42,11 +43,19 @@ int aac_init(int rate, int channels)
 
 int aac_enc_pcm(unsigned char *pcmbuffer, unsigned int buflen, unsigned char *out)
 {
-    int ret = faacEncEncode(g_aacEncHdl, (int *)pcmbuffer, g_inputsamples, out, g_maxoutbyts);
+    unsigned long inputsample = 0;
+    inputsample = buflen /(pcm_frame_bit / 8);
+    int ret = faacEncEncode(g_aacEncHdl, (int *)pcmbuffer, inputsample, out, g_maxoutbyts);
     if(ret < 1)
     {
         INFO("Cannot encoder this frame of pcm data!\n");
         return -1;
     }
+    INFO("enc pcmsize:%d, samples:%d, aacsize:%d, maxoutbytes:%d!\n", buflen, inputsample, ret, g_maxoutbyts);
     return ret;
+}
+
+int aac_enc_close()
+{
+    faacEncClose(g_aacEncHdl);
 }
