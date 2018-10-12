@@ -19,7 +19,7 @@
 #define     MEM_BLOCKS_NUM      (30)
 
 #define     PA_CHANNELS         (2)
-#define     PA_RATE             (44100)
+#define     PA_RATE             (16000)
 
 struct MemKitHandle     g_pcmhandle;
 
@@ -108,7 +108,7 @@ void *enc_pcm_func(void *arg)
     unsigned int blocklen = 0;
 
 #if DEBUG
-    int times = 1000;
+    int times = 600;
     int aac_fd;
     int pcm_fd;
 

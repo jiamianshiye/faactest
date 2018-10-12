@@ -31,7 +31,7 @@ static pa_stream *ostream = NULL;
 //static pa_context *context;
 static pa_sample_spec sample_spec = {
   .format = PA_SAMPLE_S16LE,
-  .rate = 44100,
+  .rate = 16000,
   .channels = 2
 };
 
@@ -42,7 +42,7 @@ callback_get_pcm cb_get_pcm = NULL;
 //char *fname = "tmp.s16";
 
 static size_t latency = 0, process_time = 0;
-static int32_t latency_msec = 1, process_time_msec = 0;
+static int32_t latency_msec = 1, process_time_msec = 1;
 
 
 extern pthread_mutex_t audio_cache_lock;
@@ -215,6 +215,7 @@ void state_cb(pa_context *c, void *userdata)
             buffer_attr.maxlength = (uint32_t)-1;
             buffer_attr.prebuf = (uint32_t)-1;
 
+            latency_msec = 10;
             if (latency_msec > 0)
             {
                 buffer_attr.fragsize = buffer_attr.tlength = pa_usec_to_bytes(latency_msec * PA_USEC_PER_MSEC, &sample_spec);
@@ -231,6 +232,7 @@ void state_cb(pa_context *c, void *userdata)
 
             printf("buffer fragsize:%d\n", buffer_attr.fragsize);
 
+            process_time_msec = 10;
             if (process_time_msec > 0)
             {
                 buffer_attr.minreq = pa_usec_to_bytes(process_time_msec * PA_USEC_PER_MSEC, &sample_spec);
